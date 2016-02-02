@@ -22,12 +22,46 @@
 <?define redistMSMPath = "C:\Program Files (x86)\Common Files\Merge Modules\" ?>
 <?define nonRedistPath = "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\debug_nonredist\x64\Microsoft.VC140.DebugCRT\" ?>
 
-	<Product Id="*" Name="Cask CDAP ODBC Driver" Language="1033" Version="1.0.0.1" Manufacturer="Cask" UpgradeCode="6F19DE45-E456-4AE6-BB10-1CB8538A7ED8">
+<?define CurrentVersion="1.0.9.1"?>
+<?define FirstVersion="1.0.0.0"?>
+<?define UpgradeCode="{6A65B544-F23B-4F53-A617-12DD50E2751A}"?>
+
+  <Product Id="*"
+           Name="Cask CDAP ODBC Driver" Language="1033"
+           Version="$(var.CurrentVersion)" Manufacturer="Cask"
+           UpgradeCode="$(var.UpgradeCode)">
 		<Package InstallerVersion="301"
              Compressed="yes"
              InstallScope="perMachine"
              Platform="x64"  />
-		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <Upgrade Id="$(var.UpgradeCode)">
+      <!-- Populate NEWERVERSIONDETECTED if there is an installed 
+         package with the same upgrade code
+         and the version is large the version being installed -->
+      <UpgradeVersion
+          Minimum="$(var.CurrentVersion)"
+          IncludeMinimum="no"
+          Language="1033"
+          Property="NEWERVERSIONDETECTED"
+          OnlyDetect="yes" />
+      <!-- Populate PREVIOUSVERSIONSINSTALLED if there is an installed 
+         package with the same upgrade code
+         and the version is between the earliest version defined
+         and the version being installed -->
+      <UpgradeVersion
+           Minimum="$(var.FirstVersion)"
+           IncludeMinimum="yes"
+           Maximum="$(var.CurrentVersion)"
+           IncludeMaximum="yes"
+           Language="1033"
+           Property="PREVIOUSVERSIONSINSTALLED"
+           OnlyDetect="no" />
+    </Upgrade>
+
+    <InstallExecuteSequence>
+      <RemoveExistingProducts Before="InstallInitialize" />
+    </InstallExecuteSequence>
 		<MediaTemplate EmbedCab="yes"/>
     <Feature Id="VCRedist" Title="Visual C++ Runtime" AllowAdvertise="no" Display="hidden" Level="1">
       <MergeRef Id="VCRedist"/>

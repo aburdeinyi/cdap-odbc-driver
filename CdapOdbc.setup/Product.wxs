@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 <?define targetArch =  $(var.CdapOdbc.Platform)  ?>
-<?define InstallName = "CDAP ODBC Driver" ?>
 <?define CdapOdbcDll = "CdapOdbc.dll" ?>
 <?if $(var.CdapOdbc.Configuration) = Debug ?>
   <?define CppRestDll = "cpprest140d_2_7.dll" ?>
@@ -9,12 +8,10 @@
   <?define CppRestDll = "cpprest140_2_7.dll" ?>
 <?endif ?>
 <?if $(var.targetArch) = x64 ?>
-  <?define ProductName = "$(var.InstallName) (x64)" ?>
   <?define ProgramsPath = "ProgramFiles64Folder" ?>
   <?define Win64 = "yes" ?>
 <?else ?>
   <?define targetArch = x86 ?>
-  <?define ProductName = "$(var.InstallName) (x86)" ?>
   <?define ProgramsPath = "ProgramFilesFolder" ?>
   <?define Win64 = "no" ?>
 <?endif ?>
@@ -22,7 +19,7 @@
 <?define redistMSMPath = "C:\Program Files (x86)\Common Files\Merge Modules\" ?>
 <?define nonRedistPath = "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\debug_nonredist\x64\Microsoft.VC140.DebugCRT\" ?>
 
-<?define CurrentVersion="1.0.0.1"?>
+<?define CurrentVersion="!(bind.fileVersion.$(var.CdapOdbcDll))"?>
 <?define FirstVersion="0.0.0.0"?>
 <?define UpgradeCode="{6A65B544-F23B-4F53-A617-12DD50E2751A}"?>
 

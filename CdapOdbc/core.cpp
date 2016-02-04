@@ -1094,7 +1094,8 @@ SQLRETURN SQL_API SQLGetDiagFieldW(
   SQLPOINTER DiagInfo,
   SQLSMALLINT BufferLength,
   SQLSMALLINT *StringLength) {
-  TRACE(L"SQLGetDiagFieldW\n");
+  TRACE(L"SQLGetDiagFieldW (HandleType = %d, Handle = %X, RecNumber = %d, DiagIdentifier = %d, DiagInfo = %X, BufferLength = %d, StringLength = %d)\n", 
+	  HandleType, Handle, RecNumber, DiagIdentifier, DiagInfo, BufferLength, StringLength);
   return SQL_ERROR;
 }
 
@@ -1107,7 +1108,8 @@ SQLRETURN SQL_API SQLGetDiagRecW(
   SQLWCHAR* MessageText,
   SQLSMALLINT BufferLength,
   SQLSMALLINT *TextLength) {
-  TRACE(L"SQLGetDiagRecW\n");
+  TRACE(L"SQLGetDiagRecW (HandleType = %d, Handle = %X, RecNumber = %d, Sqlstate = %d, NativeError = %X, MessageText = %s, BufferLength = %d, TextLength = )\n",
+	  HandleType, Handle, RecNumber, Sqlstate, NativeError, MessageText, BufferLength, TextLength);
   return SQL_ERROR;
 }
 

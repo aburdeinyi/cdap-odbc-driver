@@ -21,6 +21,10 @@
 #include "Statement.h"
 #include "Descriptor.h"
 #include "InvalidHandleException.h"
+#include "DataSourceDialog.h"
+#include "Argument.h"
+
+#define ODBC_INI L"ODBC.INI"
 
 using namespace Cask::CdapOdbc;
 
@@ -95,9 +99,9 @@ void Cask::CdapOdbc::Driver::initializeDataTypes() {
   this->dataTypes.insert({ L"boolean", DataType(L"boolean", SQL_BIT, 0, 1) });
   this->dataTypes.insert({ L"binary", DataType(L"binary", SQL_BINARY, std::numeric_limits<std::int32_t>::max(), std::numeric_limits<std::int32_t>::max()) });
   this->dataTypes.insert({ L"double", DataType(L"double", SQL_DOUBLE, 0, 24) });
-  this->dataTypes.insert({ L"float", DataType(L"float", SQL_REAL, 0, 7) });
+  this->dataTypes.insert({ L"float", DataType(L"float", SQL_REAL, 0, 12) });
   this->dataTypes.insert({ L"int", DataType(L"int", SQL_INTEGER, 0, 11) });
-  this->dataTypes.insert({ L"bigint", DataType(L"bigint", SQL_BIGINT, 0, 19) });
+  this->dataTypes.insert({ L"bigint", DataType(L"bigint", SQL_BIGINT, 0, 20) });
   this->dataTypes.insert({ L"string", DataType(L"string", SQL_CHAR, std::numeric_limits<std::int32_t>::max(), std::numeric_limits<std::int32_t>::max()) });
   this->dataTypes.insert({ L"map<string,string>", DataType(L"string", SQL_CHAR, std::numeric_limits<std::int32_t>::max(), std::numeric_limits<std::int32_t>::max()) });
 }
@@ -276,4 +280,32 @@ void Cask::CdapOdbc::Driver::setupSupportedFunctions(SQLUSMALLINT* bitset) {
   setFunction(bitset, SQL_API_SQLSPECIALCOLUMNS);
   setFunction(bitset, SQL_API_SQLSTATISTICS);
   setFunction(bitset, SQL_API_SQLTABLES);
+}
+
+void Cask::CdapOdbc::Driver::addDataSource(HWND parentWindow, const std::wstring& driver, const std::wstring& attrs) {
+  auto dialog = std::make_unique<DataSourceDialog>(parentWindow);
+  if (dialog->show()) {
+    if (!::SQLWriteDSNToIniW(dialog->getName().c_str(), driver.c_str())) {
+      throw std::logic_error("Cannot write DSN.");
+    }
+  }
+}
+
+void Cask::CdapOdbc::Driver::modifyDataSource(HWND parentWindow, const std::wstring& driver, const std::wstring& attrs) {
+  auto params = ConnectionParams(attrs);
+  auto dialog = std::make_unique<DataSourceDialog>(parentWindow);
+  dialog->setName(params.getDsn());
+  if (dialog->show()) {
+    if (params.getDsn() != dialog->getName()) {
+      ::SQLRemoveDSNFromIniW(params.getDsn().c_str());
+      if (!::SQLWriteDSNToIniW(dialog->getName().c_str(), driver.c_str())) {
+        throw std::logic_error("Cannot write DSN.");
+      }
+    }
+  }
+}
+
+void Cask::CdapOdbc::Driver::deleteDataSource(const std::wstring& driver, const std::wstring& attrs) {
+  auto params = ConnectionParams(attrs);
+  ::SQLRemoveDSNFromIniW(params.getDsn().c_str());
 }

@@ -82,7 +82,7 @@
       <UIRef Id="WixUI_Minimal" />
       <Dialog Id="AcceptUninstall" Title="Accept uninstall previouse products" Height="80" Width="250">
         <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text>Newer version found continue installation?</Text>
+          <Text>A newer version of [ProductName] is already installed. Continue installation?</Text>
         </Control>
         <Control Id="No" Type="PushButton" X="132" Y="57" Width="56" Height="17" Default="yes" Cancel="yes" Text="No">
           <Publish Event="EndDialog" Value="Exit">1</Publish>

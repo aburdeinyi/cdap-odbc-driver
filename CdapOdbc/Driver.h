@@ -17,6 +17,7 @@
 #pragma once
 
 #include "DataType.h"
+#include "ErrorStatus.h"
 
 namespace Cask {
   namespace CdapOdbc {
@@ -24,6 +25,7 @@ namespace Cask {
     class Connection;
     class Statement;
     class Descriptor;
+	class ErrorStatus;
 
     /**
      * Represents root object of ODBC driver.
@@ -37,6 +39,8 @@ namespace Cask {
       std::map<SQLHDBC, std::unique_ptr<Connection>> connections;
       std::map<SQLHSTMT, std::unique_ptr<Statement>> statements;
       std::map<SQLHDESC, std::unique_ptr<Descriptor>> descriptors;
+
+	  ErrorStatus errStatus;
 
       std::mutex mutex;
 
@@ -89,6 +93,8 @@ namespace Cask {
       * Gets a descriptor by handle.
       */
       Descriptor& getDescriptor(SQLHDESC desc);
+
+	  ErrorStatus& getErrorStatus();
 
       /**
       * Gets a data type by name.

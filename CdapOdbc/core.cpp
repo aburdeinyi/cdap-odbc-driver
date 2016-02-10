@@ -26,6 +26,7 @@
 #include "Statement.h"
 #include "ConnectionDialog.h"
 #include "Encoding.h"
+#include "ErrorStatus.h"
 
 using namespace Cask::CdapOdbc;
 
@@ -95,9 +96,13 @@ SQLRETURN SQL_API SQLAllocHandle(
     }
   } catch (InvalidHandleException&) {
     TRACE(L"SQLAllocHandle returns SQL_INVALID_HANDLE\n");
+	auto& connStatus = Driver::getInstance().getErrorStatus();
+	connStatus.addMsg(L"08003", L"Connection not open");
     return SQL_INVALID_HANDLE;
   } catch (std::exception&) {
     TRACE(L"SQLAllocHandle returns SQL_ERROR\n");
+	auto& connStatus = Driver::getInstance().getErrorStatus();
+	connStatus.addMsg(L"08003", L"Connection not open");
     return SQL_ERROR;
   }
 }
@@ -154,6 +159,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
         }
 
         TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
+		Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open");
         return SQL_ERROR;
       case SQL_DRIVER_COMPLETE:
       case SQL_DRIVER_COMPLETE_REQUIRED:
@@ -164,6 +170,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
           dialog->setParams(ConnectionParams(*connectionString));
           if (!dialog->show()) {
             TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
+			Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open");
             return SQL_ERROR;
           }
           
@@ -175,6 +182,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
         connection.open(newConnectionString);
         Argument::fromStdString(newConnectionString, OutConnectionString, BufferLength, StringLength2Ptr);
         TRACE(L"SQLDriverConnectW returns SQL_SUCCESS, OutConnectionString = %s\n", OutConnectionString);
+		Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open");
         return SQL_SUCCESS;
       case SQL_DRIVER_NOPROMPT:
         // DRIVER 2
@@ -182,16 +190,20 @@ SQLRETURN SQL_API SQLDriverConnectW(
         connection.open(*connectionString);
         Argument::fromStdString(*connectionString, OutConnectionString, BufferLength, StringLength2Ptr);
         TRACE(L"SQLDriverConnectW returns SQL_SUCCESS, OutConnectionString = %s\n", OutConnectionString);
+		Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open");
         return SQL_SUCCESS;
     }
 
     TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
+	Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open SQL_ERROR");
     return SQL_ERROR;
   } catch (InvalidHandleException&) {
     TRACE(L"SQLDriverConnectW returns SQL_INVALID_HANDLE\n");
+	Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open SQL_INVALID_HANDLE");
     return SQL_INVALID_HANDLE;
   } catch (std::exception) {
     TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
+	Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open SQL_ERROR");
     return SQL_ERROR;
   }
 }
@@ -1095,6 +1107,18 @@ SQLRETURN SQL_API SQLGetDiagFieldW(
   SQLSMALLINT *StringLength) {
   TRACE(L"SQLGetDiagFieldW (HandleType = %d, Handle = %X, RecNumber = %d, DiagIdentifier = %d, DiagInfo = %X, BufferLength = %d, StringLength = %d)\n", 
 	  HandleType, Handle, RecNumber, DiagIdentifier, DiagInfo, BufferLength, StringLength);
+  SQLSMALLINT copiedLen = 0;
+  switch (DiagIdentifier) {
+  case SQL_DIAG_CLASS_ORIGIN:
+  case SQL_DIAG_SUBCLASS_ORIGIN:
+	  Argument::fromStdString(L"ODBC 3.0", static_cast<SQLWCHAR*>(DiagInfo), BufferLength, &copiedLen);
+	  return SQL_SUCCESS;
+  case SQL_DIAG_CONNECTION_NAME:
+  case SQL_DIAG_SERVER_NAME:
+	  // TODO get connection name from driver
+	  Argument::fromStdString(L"NO DSN", static_cast<SQLWCHAR*>(DiagInfo), BufferLength, &copiedLen);
+	  return SQL_SUCCESS;
+  }
   return SQL_ERROR;
 }
 
@@ -1109,6 +1133,46 @@ SQLRETURN SQL_API SQLGetDiagRecW(
   SQLSMALLINT *TextLength) {
   TRACE(L"SQLGetDiagRecW (HandleType = %d, Handle = %X, RecNumber = %d, Sqlstate = %d, NativeError = %X, MessageText = %s, BufferLength = %d, TextLength = )\n",
 	  HandleType, Handle, RecNumber, Sqlstate, NativeError, MessageText, BufferLength, TextLength);
+  
+  if (RecNumber > 1) {
+	  return SQL_NO_DATA;
+  }
+  
+  ErrorStatus status;
+
+  switch (HandleType) {
+
+  case SQL_HANDLE_DBC:
+	  status = Driver::getInstance().getErrorStatus();
+	  break;
+  case SQL_HANDLE_ENV:
+  case SQL_HANDLE_STMT:
+  case SQL_HANDLE_DESC:
+  default:
+	  return SQL_ERROR;
+  }
+
+  if (BufferLength < 0)
+  {
+	  return SQL_ERROR;
+  }
+
+  auto& code = status.getCode(RecNumber);
+  auto& msg = status.getMessage(RecNumber);
+
+  if (msg.length()) {
+	  *TextLength = (SQLSMALLINT) msg.size();
+  }
+  SQLSMALLINT copiedLen = 0;
+  if (code.length() > 0) {
+	  Argument::fromStdString(code, Sqlstate, 5, &copiedLen);
+	  if(BufferLength > 0) {
+		  Argument::fromStdString(msg, MessageText, BufferLength, &copiedLen);
+	  }
+	  return SQL_SUCCESS;
+  }
+  return SQL_ERROR;
+
   return SQL_ERROR;
 }
 

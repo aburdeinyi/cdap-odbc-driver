@@ -20,6 +20,7 @@
 #include "StillExecutingException.h"
 #include "CancelException.h"
 #include "NoDataException.h"
+#include "CommunicationLinkFailure.h"
 #include "Driver.h"
 #include "Environment.h"
 #include "Connection.h"
@@ -27,6 +28,7 @@
 #include "Statement.h"
 #include "ConnectionDialog.h"
 #include "Encoding.h"
+#include "SQLStatus.h"
 
 using namespace Cask::CdapOdbc;
 
@@ -96,10 +98,10 @@ SQLRETURN SQL_API SQLAllocHandle(
     }
   } catch (InvalidHandleException&) {
     TRACE(L"SQLAllocHandle returns SQL_INVALID_HANDLE\n");
-    return SQL_INVALID_HANDLE;
+	return SQL_INVALID_HANDLE;
   } catch (std::exception&) {
     TRACE(L"SQLAllocHandle returns SQL_ERROR\n");
-    return SQL_ERROR;
+	return SQL_ERROR;
   }
 }
 
@@ -140,6 +142,9 @@ SQLRETURN SQL_API SQLDriverConnectW(
     std::wstring newConnectionString;
     std::unique_ptr<ConnectionDialog> dialog;
 
+	// Clear Connection SQL Status
+	connection.getSqlStatus().clear();
+
     switch (DriverCompletion) {
       case SQL_DRIVER_PROMPT:
         // DRIVER
@@ -165,6 +170,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
           dialog->setParams(ConnectionParams(*connectionString));
           if (!dialog->show()) {
             TRACE(L"SQLDriverConnectW returns SQL_NO_DATA\n");
+			//connection.getSqlStatus().addMsg(L"HY000", L"General error: Invalid file dsn");
             return SQL_NO_DATA;
           }
           
@@ -176,24 +182,32 @@ SQLRETURN SQL_API SQLDriverConnectW(
         connection.open(newConnectionString);
         Argument::fromStdString(newConnectionString, OutConnectionString, BufferLength, StringLength2Ptr);
         TRACE(L"SQLDriverConnectW returns SQL_SUCCESS, OutConnectionString = %s\n", OutConnectionString);
-        return SQL_SUCCESS;
+		return SQL_SUCCESS;
       case SQL_DRIVER_NOPROMPT:
         // DRIVER 2
         connectionString = Argument::toStdString(InConnectionString, StringLength1);
         connection.open(*connectionString);
         Argument::fromStdString(*connectionString, OutConnectionString, BufferLength, StringLength2Ptr);
         TRACE(L"SQLDriverConnectW returns SQL_SUCCESS, OutConnectionString = %s\n", OutConnectionString);
-        return SQL_SUCCESS;
+		return SQL_SUCCESS;
     }
 
     TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
+	connection.getSqlStatus().addMsg(L"HYC00", L"Optional feature not implemented");
     return SQL_ERROR;
   } catch (InvalidHandleException&) {
     TRACE(L"SQLDriverConnectW returns SQL_INVALID_HANDLE\n");
-    return SQL_INVALID_HANDLE;
+	return SQL_INVALID_HANDLE;
+  } catch (CommunicationLinkFailure&) {
+	  TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
+	  auto& connection = Driver::getInstance().getConnection(ConnectionHandle);
+	  connection.getSqlStatus().addMsg(L"08S01", L"Communication link failure");
+	  return SQL_ERROR;
   } catch (std::exception) {
-    TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
-    return SQL_ERROR;
+	  TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
+	  auto& connection = Driver::getInstance().getConnection(ConnectionHandle);
+	  connection.getSqlStatus().addMsg(L"08003", L"Connection not open SQL_INVALID_HANDLE");
+	  return SQL_ERROR;
   }
 }
 
@@ -1096,6 +1110,63 @@ SQLRETURN SQL_API SQLGetDiagFieldW(
   SQLSMALLINT *StringLength) {
   TRACE(L"SQLGetDiagFieldW (HandleType = %d, Handle = %X, RecNumber = %d, DiagIdentifier = %d, DiagInfo = %X, BufferLength = %d, StringLength = %d)\n", 
 	  HandleType, Handle, RecNumber, DiagIdentifier, DiagInfo, BufferLength, StringLength);
+
+  SQLStatus status;
+
+  switch (HandleType) {
+
+  case SQL_HANDLE_DBC:
+	  status = Driver::getInstance().getConnection(Handle).getSqlStatus();
+	  break;
+  case SQL_HANDLE_STMT:
+	  status = Driver::getInstance().getStatement(Handle).getSqlStatus();
+	  break;
+  case SQL_HANDLE_ENV:
+  case SQL_HANDLE_DESC:
+  default:
+	  return SQL_ERROR;
+  }
+
+  if (status.getRecCount() + 1 < RecNumber) {
+	  return SQL_NO_DATA;
+  }
+
+  auto& code = status.getCode(RecNumber);
+  std::wstring logmsg = L"";
+  SQLSMALLINT copiedLen = 0;
+  switch (DiagIdentifier) {
+  case SQL_DIAG_CLASS_ORIGIN:
+	  logmsg = L"ISO 9075";
+	  if (code[0] == L'I' && code[1] == L'M') {
+		  logmsg = L"ODBC 3.0";
+	  }
+	  break;
+  case SQL_DIAG_SUBCLASS_ORIGIN:
+	  logmsg = L"ISO 9075";
+	  if (code[0] == L'I' && code[1] == L'M') {
+		  logmsg = L"ODBC 3.0";
+	  }
+	  else if (code[0] == L'H' && code[1] == L'Y') {
+		  logmsg = L"ODBC 3.0";
+	  }
+	  else if (code[0] == L'2' || code[0] == L'0' || code[0] == L'4') {
+		  logmsg = L"ODBC 3.0";
+	  }
+	  break; 
+  case SQL_DIAG_CONNECTION_NAME:
+  case SQL_DIAG_SERVER_NAME:
+	  // TODO get connection name from driver
+	  logmsg = L"NO DSN";
+	  break;
+  case SQL_DIAG_SQLSTATE:
+	  logmsg = code;
+	  break;
+  }
+
+  if (BufferLength > 0) {
+	  Argument::fromStdString(logmsg, static_cast<SQLWCHAR*>(DiagInfo), BufferLength, &copiedLen);
+	  return SQL_SUCCESS;
+  }
   return SQL_ERROR;
 }
 
@@ -1110,6 +1181,46 @@ SQLRETURN SQL_API SQLGetDiagRecW(
   SQLSMALLINT *TextLength) {
   TRACE(L"SQLGetDiagRecW (HandleType = %d, Handle = %X, RecNumber = %d, Sqlstate = %d, NativeError = %X, MessageText = %s, BufferLength = %d, TextLength = )\n",
 	  HandleType, Handle, RecNumber, Sqlstate, NativeError, MessageText, BufferLength, TextLength);
+  
+   
+  SQLStatus status;
+  
+  switch (HandleType) {
+
+  case SQL_HANDLE_DBC:
+	  status = Driver::getInstance().getConnection(Handle).getSqlStatus();
+	  break;
+  case SQL_HANDLE_STMT:
+	  status = Driver::getInstance().getStatement(Handle).getSqlStatus();
+	  break;
+  case SQL_HANDLE_ENV:
+  case SQL_HANDLE_DESC:
+  default:
+	  return SQL_ERROR;
+  }
+
+  if (BufferLength < 0) {
+	  return SQL_ERROR;
+  }
+  if (status.getRecCount() + 1 < RecNumber) {
+	  return SQL_NO_DATA;
+  }
+
+  auto& code = status.getCode(RecNumber);
+  auto& msg = status.getMessage(RecNumber);
+
+  if (msg.length()) {
+	  *TextLength = (SQLSMALLINT) msg.size();
+  }
+  SQLSMALLINT copiedLen = 0;
+  if (code.length() > 0) {
+	  Argument::fromStdString(code, Sqlstate, 5, &copiedLen);
+	  if(BufferLength > 0) {
+		  Argument::fromStdString(msg, MessageText, BufferLength, &copiedLen);
+	  }
+	  return SQL_SUCCESS;
+  }
+
   return SQL_ERROR;
 }
 

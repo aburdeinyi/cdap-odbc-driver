@@ -160,6 +160,10 @@
       <Filter>Exceptions</Filter>
     </ClInclude>
     <ClInclude Include="BadRequestException.h">
+    <ClInclude Include="SQLStatus.h">
+      <Filter>Driver</Filter>
+    </ClInclude>
+    <ClInclude Include="CommunicationLinkFailure.h">
       <Filter>Exceptions</Filter>
     </ClInclude>
   </ItemGroup>
@@ -286,6 +290,11 @@
     </ClCompile>
     <ClCompile Include="BadRequestException.cpp">
       <Filter>Exceptions</Filter>
+    <ClCompile Include="CommunicationLinkFailure.cpp">
+      <Filter>Exceptions</Filter>
+    </ClCompile>
+    <ClCompile Include="SQLStatus.cpp">
+      <Filter>Driver</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

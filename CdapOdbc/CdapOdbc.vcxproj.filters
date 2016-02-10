@@ -156,6 +156,7 @@
     <ClInclude Include="DataSourceDialog.h">
       <Filter>Resources</Filter>
     </ClInclude>
+    <ClInclude Include="CommunicationLinkFailure.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Driver.cpp">
@@ -276,6 +277,7 @@
       <Filter>Resources</Filter>
     </ClCompile>
     <ClCompile Include="ErrorStatus.cpp" />
+    <ClCompile Include="CommunicationLinkFailure.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

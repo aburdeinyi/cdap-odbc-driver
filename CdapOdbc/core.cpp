@@ -19,6 +19,7 @@
 #include "InvalidHandleException.h"
 #include "StillExecutingException.h"
 #include "NoDataException.h"
+#include "CommunicationLinkFailure.h"
 #include "Driver.h"
 #include "Environment.h"
 #include "Connection.h"
@@ -170,7 +171,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
           dialog->setParams(ConnectionParams(*connectionString));
           if (!dialog->show()) {
             TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
-			Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open");
+			Driver::getInstance().getErrorStatus().addMsg(L"IM012", L"DRIVER keyword syntax error");
             return SQL_ERROR;
           }
           
@@ -201,10 +202,14 @@ SQLRETURN SQL_API SQLDriverConnectW(
     TRACE(L"SQLDriverConnectW returns SQL_INVALID_HANDLE\n");
 	Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open SQL_INVALID_HANDLE");
     return SQL_INVALID_HANDLE;
+  } catch (CommunicationLinkFailure) {
+	  TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
+	  Driver::getInstance().getErrorStatus().addMsg(L"08S01", L"Communication link failure");
+	  return SQL_ERROR;
   } catch (std::exception) {
-    TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
-	Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open SQL_ERROR");
-    return SQL_ERROR;
+	  TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
+	  Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open SQL_INVALID_HANDLE");
+	  return SQL_ERROR;
   }
 }
 

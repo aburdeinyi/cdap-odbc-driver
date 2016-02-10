@@ -97,14 +97,10 @@ SQLRETURN SQL_API SQLAllocHandle(
     }
   } catch (InvalidHandleException&) {
     TRACE(L"SQLAllocHandle returns SQL_INVALID_HANDLE\n");
-	auto& connStatus = Driver::getInstance().getErrorStatus();
-	connStatus.addMsg(L"08003", L"Connection not open");
-    return SQL_INVALID_HANDLE;
+	return SQL_INVALID_HANDLE;
   } catch (std::exception&) {
     TRACE(L"SQLAllocHandle returns SQL_ERROR\n");
-	auto& connStatus = Driver::getInstance().getErrorStatus();
-	connStatus.addMsg(L"08003", L"Connection not open");
-    return SQL_ERROR;
+	return SQL_ERROR;
   }
 }
 
@@ -160,7 +156,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
         }
 
         TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
-		Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open");
+		connection.getSqlStatus().addMsg(L"HY000", L"General error: Failed to setup connection");
         return SQL_ERROR;
       case SQL_DRIVER_COMPLETE:
       case SQL_DRIVER_COMPLETE_REQUIRED:
@@ -171,7 +167,7 @@ SQLRETURN SQL_API SQLDriverConnectW(
           dialog->setParams(ConnectionParams(*connectionString));
           if (!dialog->show()) {
             TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
-			Driver::getInstance().getErrorStatus().addMsg(L"IM012", L"DRIVER keyword syntax error");
+			connection.getSqlStatus().addMsg(L"HY000", L"General error: Invalid file dsn");
             return SQL_ERROR;
           }
           
@@ -183,32 +179,33 @@ SQLRETURN SQL_API SQLDriverConnectW(
         connection.open(newConnectionString);
         Argument::fromStdString(newConnectionString, OutConnectionString, BufferLength, StringLength2Ptr);
         TRACE(L"SQLDriverConnectW returns SQL_SUCCESS, OutConnectionString = %s\n", OutConnectionString);
-		Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open");
-        return SQL_SUCCESS;
+		return SQL_SUCCESS;
       case SQL_DRIVER_NOPROMPT:
         // DRIVER 2
         connectionString = Argument::toStdString(InConnectionString, StringLength1);
         connection.open(*connectionString);
         Argument::fromStdString(*connectionString, OutConnectionString, BufferLength, StringLength2Ptr);
         TRACE(L"SQLDriverConnectW returns SQL_SUCCESS, OutConnectionString = %s\n", OutConnectionString);
-		Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open");
-        return SQL_SUCCESS;
+		return SQL_SUCCESS;
     }
 
     TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
-	Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open SQL_ERROR");
+	connection.getSqlStatus().addMsg(L"HYC00", L"Optional feature not implemented");
     return SQL_ERROR;
   } catch (InvalidHandleException&) {
     TRACE(L"SQLDriverConnectW returns SQL_INVALID_HANDLE\n");
-	Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open SQL_INVALID_HANDLE");
+	auto& connection = Driver::getInstance().getConnection(ConnectionHandle);
+	connection.getSqlStatus().addMsg(L"08003", L"Connection not open SQL_INVALID_HANDLE");
     return SQL_INVALID_HANDLE;
   } catch (CommunicationLinkFailure) {
 	  TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
-	  Driver::getInstance().getErrorStatus().addMsg(L"08S01", L"Communication link failure");
+	  auto& connection = Driver::getInstance().getConnection(ConnectionHandle);
+	  connection.getSqlStatus().addMsg(L"08S01", L"Communication link failure");
 	  return SQL_ERROR;
   } catch (std::exception) {
 	  TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
-	  Driver::getInstance().getErrorStatus().addMsg(L"08003", L"Connection not open SQL_INVALID_HANDLE");
+	  auto& connection = Driver::getInstance().getConnection(ConnectionHandle);
+	  connection.getSqlStatus().addMsg(L"08003", L"Connection not open SQL_INVALID_HANDLE");
 	  return SQL_ERROR;
   }
 }
@@ -1144,11 +1141,12 @@ SQLRETURN SQL_API SQLGetDiagRecW(
   }
   
   ErrorStatus status;
+  
 
   switch (HandleType) {
 
   case SQL_HANDLE_DBC:
-	  status = Driver::getInstance().getErrorStatus();
+	  status = Driver::getInstance().getConnection(Handle).getSqlStatus();
 	  break;
   case SQL_HANDLE_ENV:
   case SQL_HANDLE_STMT:

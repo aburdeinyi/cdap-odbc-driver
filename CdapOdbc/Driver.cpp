@@ -148,12 +148,6 @@ Descriptor& Cask::CdapOdbc::Driver::getDescriptor(SQLHDESC desc) {
   throw InvalidHandleException("desc", desc);
 }
 
-ErrorStatus& Cask::CdapOdbc::Driver::getErrorStatus() {
-	std::lock_guard<std::mutex> lock(this->mutex);
-	return errStatus;
-
-}
-
 SQLHENV Cask::CdapOdbc::Driver::allocEnvironment() {
   SQLHENV env = generateNewHandle();
   std::lock_guard<std::mutex> lock(this->mutex);

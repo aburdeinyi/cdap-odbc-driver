@@ -7,7 +7,7 @@ namespace Cask {
 		/*
 		 * Represents error or worning record element
 		*/
-		class ErrorStatusElement {
+		class SQLStatusElement {
 		public:
 			std::wstring code;
 			std::wstring msg;
@@ -17,7 +17,7 @@ namespace Cask {
 			/*
 			 * Constructor
 			*/
-			ErrorStatusElement(
+			SQLStatusElement(
 				std::wstring code = L"\0",
 				std::wstring msg = L"\0",
 				void* binError = NULL,
@@ -28,12 +28,12 @@ namespace Cask {
 			/*
 			 * Destructor
 			*/
-			~ErrorStatusElement() {};
+			~SQLStatusElement() {};
 
 		};
 
-		class ErrorStatus {
-			std::list<ErrorStatusElement> statusItems;
+		class SQLStatus {
+			std::list<SQLStatusElement> statusItems;
 			std::wstring dummy = L"\0";
 
 		public:
@@ -41,12 +41,12 @@ namespace Cask {
 			/*
 			 * Constructor
 			 */
-			ErrorStatus();
+			SQLStatus();
 
 			/*
 			 * Destructor
 			 */
-			~ErrorStatus() = default;
+			~SQLStatus() = default;
 
 			/*
 			 * Add new log error record in the storage

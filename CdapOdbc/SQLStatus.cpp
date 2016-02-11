@@ -14,26 +14,26 @@
 * the License.
 */
 #include "stdafx.h"
-#include "ErrorStatus.h"
+#include "SQLStatus.h"
 
 using namespace Cask::CdapOdbc;
 
-Cask::CdapOdbc::ErrorStatus::ErrorStatus() {
+Cask::CdapOdbc::SQLStatus::SQLStatus() {
 	
 }
 
-void Cask::CdapOdbc::ErrorStatus::addMsg(std::wstring code,
+void Cask::CdapOdbc::SQLStatus::addMsg(std::wstring code,
 	std::wstring msg,
 	void* binError,
 	size_t buffLength) {
-	statusItems.push_front(ErrorStatusElement(code, msg, binError, buffLength));
+	statusItems.push_front(SQLStatusElement(code, msg, binError, buffLength));
 }
 
-void Cask::CdapOdbc::ErrorStatus::clear() {
+void Cask::CdapOdbc::SQLStatus::clear() {
 	statusItems.clear();
 }
 
-std::wstring& Cask::CdapOdbc::ErrorStatus::getCode(SQLSMALLINT recNum) {
+std::wstring& Cask::CdapOdbc::SQLStatus::getCode(SQLSMALLINT recNum) {
 	
 	if (statusItems.size() >= recNum && recNum >= 1) {
 		auto& it = statusItems.begin();
@@ -43,7 +43,7 @@ std::wstring& Cask::CdapOdbc::ErrorStatus::getCode(SQLSMALLINT recNum) {
 	return dummy;
 }
 
-std::wstring& Cask::CdapOdbc::ErrorStatus::getMessage(SQLSMALLINT recNum) {
+std::wstring& Cask::CdapOdbc::SQLStatus::getMessage(SQLSMALLINT recNum) {
 	if (statusItems.size() >= recNum && recNum >= 1) {
 		auto& it = statusItems.begin();
 		std::advance(it, recNum - 1);
@@ -52,6 +52,6 @@ std::wstring& Cask::CdapOdbc::ErrorStatus::getMessage(SQLSMALLINT recNum) {
 	return dummy;
 }
 
-SQLSMALLINT Cask::CdapOdbc::ErrorStatus::getRecCount() {
+SQLSMALLINT Cask::CdapOdbc::SQLStatus::getRecCount() {
 	return statusItems.size();
 }

@@ -27,7 +27,7 @@
 #include "Statement.h"
 #include "ConnectionDialog.h"
 #include "Encoding.h"
-#include "ErrorStatus.h"
+#include "SQLStatus.h"
 
 using namespace Cask::CdapOdbc;
 
@@ -1108,7 +1108,7 @@ SQLRETURN SQL_API SQLGetDiagFieldW(
   TRACE(L"SQLGetDiagFieldW (HandleType = %d, Handle = %X, RecNumber = %d, DiagIdentifier = %d, DiagInfo = %X, BufferLength = %d, StringLength = %d)\n", 
 	  HandleType, Handle, RecNumber, DiagIdentifier, DiagInfo, BufferLength, StringLength);
 
-  ErrorStatus status;
+  SQLStatus status;
 
   switch (HandleType) {
 
@@ -1178,7 +1178,7 @@ SQLRETURN SQL_API SQLGetDiagRecW(
 	  HandleType, Handle, RecNumber, Sqlstate, NativeError, MessageText, BufferLength, TextLength);
   
    
-  ErrorStatus status;
+  SQLStatus status;
   
   switch (HandleType) {
 

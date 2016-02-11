@@ -25,12 +25,11 @@ Cask::CdapOdbc::ErrorStatus::ErrorStatus() {
 void Cask::CdapOdbc::ErrorStatus::addMsg(std::wstring code,
 	std::wstring msg,
 	void* binError,
-	size_t buffLength)
-{
+	size_t buffLength) {
 	statusItems.push_front(ErrorStatusElement(code, msg, binError, buffLength));
 }
 
-void Cask::CdapOdbc::ErrorStatus::clear(){
+void Cask::CdapOdbc::ErrorStatus::clear() {
 	statusItems.clear();
 }
 
@@ -51,4 +50,8 @@ std::wstring& Cask::CdapOdbc::ErrorStatus::getMessage(SQLSMALLINT recNum) {
 		return it->msg;
 	}
 	return dummy;
+}
+
+SQLSMALLINT Cask::CdapOdbc::ErrorStatus::getRecCount() {
+	return statusItems.size();
 }

@@ -1107,16 +1107,59 @@ SQLRETURN SQL_API SQLGetDiagFieldW(
   SQLSMALLINT *StringLength) {
   TRACE(L"SQLGetDiagFieldW (HandleType = %d, Handle = %X, RecNumber = %d, DiagIdentifier = %d, DiagInfo = %X, BufferLength = %d, StringLength = %d)\n", 
 	  HandleType, Handle, RecNumber, DiagIdentifier, DiagInfo, BufferLength, StringLength);
+
+  ErrorStatus status;
+
+  switch (HandleType) {
+
+  case SQL_HANDLE_DBC:
+	  status = Driver::getInstance().getConnection(Handle).getSqlStatus();
+	  break;
+  case SQL_HANDLE_ENV:
+  case SQL_HANDLE_STMT:
+  case SQL_HANDLE_DESC:
+  default:
+	  return SQL_ERROR;
+  }
+
+  if (status.getRecCount() + 1 < RecNumber) {
+	  return SQL_NO_DATA;
+  }
+
+  auto& code = status.getCode(RecNumber);
+  std::wstring logmsg = L"";
   SQLSMALLINT copiedLen = 0;
   switch (DiagIdentifier) {
   case SQL_DIAG_CLASS_ORIGIN:
+	  logmsg = L"ISO 9075";
+	  if (code[0] == L'I' && code[1] == L'M') {
+		  logmsg = L"ODBC 3.0";
+	  }
+	  break;
   case SQL_DIAG_SUBCLASS_ORIGIN:
-	  Argument::fromStdString(L"ODBC 3.0", static_cast<SQLWCHAR*>(DiagInfo), BufferLength, &copiedLen);
-	  return SQL_SUCCESS;
+	  logmsg = L"ISO 9075";
+	  if (code[0] == L'I' && code[1] == L'M') {
+		  logmsg = L"ODBC 3.0";
+	  }
+	  else if (code[0] == L'H' && code[1] == L'Y') {
+		  logmsg = L"ODBC 3.0";
+	  }
+	  else if (code[0] == L'2' || code[0] == L'0' || code[0] == L'4') {
+		  logmsg = L"ODBC 3.0";
+	  }
+	  break; 
   case SQL_DIAG_CONNECTION_NAME:
   case SQL_DIAG_SERVER_NAME:
 	  // TODO get connection name from driver
-	  Argument::fromStdString(L"NO DSN", static_cast<SQLWCHAR*>(DiagInfo), BufferLength, &copiedLen);
+	  logmsg = L"NO DSN";
+	  break;
+  case SQL_DIAG_SQLSTATE:
+	  logmsg = code;
+	  break;
+  }
+
+  if (BufferLength > 0) {
+	  Argument::fromStdString(logmsg, static_cast<SQLWCHAR*>(DiagInfo), BufferLength, &copiedLen);
 	  return SQL_SUCCESS;
   }
   return SQL_ERROR;
@@ -1134,13 +1177,9 @@ SQLRETURN SQL_API SQLGetDiagRecW(
   TRACE(L"SQLGetDiagRecW (HandleType = %d, Handle = %X, RecNumber = %d, Sqlstate = %d, NativeError = %X, MessageText = %s, BufferLength = %d, TextLength = )\n",
 	  HandleType, Handle, RecNumber, Sqlstate, NativeError, MessageText, BufferLength, TextLength);
   
-  if (RecNumber > 1) {
-	  return SQL_NO_DATA;
-  }
-  
+   
   ErrorStatus status;
   
-
   switch (HandleType) {
 
   case SQL_HANDLE_DBC:
@@ -1153,9 +1192,11 @@ SQLRETURN SQL_API SQLGetDiagRecW(
 	  return SQL_ERROR;
   }
 
-  if (BufferLength < 0)
-  {
+  if (BufferLength < 0) {
 	  return SQL_ERROR;
+  }
+  if (status.getRecCount() + 1 < RecNumber) {
+	  return SQL_NO_DATA;
   }
 
   auto& code = status.getCode(RecNumber);
@@ -1172,7 +1213,6 @@ SQLRETURN SQL_API SQLGetDiagRecW(
 	  }
 	  return SQL_SUCCESS;
   }
-  return SQL_ERROR;
 
   return SQL_ERROR;
 }

@@ -194,10 +194,8 @@ SQLRETURN SQL_API SQLDriverConnectW(
     return SQL_ERROR;
   } catch (InvalidHandleException&) {
     TRACE(L"SQLDriverConnectW returns SQL_INVALID_HANDLE\n");
-	auto& connection = Driver::getInstance().getConnection(ConnectionHandle);
-	connection.getSqlStatus().addMsg(L"08003", L"Connection not open SQL_INVALID_HANDLE");
-    return SQL_INVALID_HANDLE;
-  } catch (CommunicationLinkFailure) {
+	return SQL_INVALID_HANDLE;
+  } catch (CommunicationLinkFailure&) {
 	  TRACE(L"SQLDriverConnectW returns SQL_ERROR\n");
 	  auto& connection = Driver::getInstance().getConnection(ConnectionHandle);
 	  connection.getSqlStatus().addMsg(L"08S01", L"Communication link failure");

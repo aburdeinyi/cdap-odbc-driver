@@ -141,6 +141,9 @@ SQLRETURN SQL_API SQLDriverConnectW(
     std::wstring newConnectionString;
     std::unique_ptr<ConnectionDialog> dialog;
 
+	// Clear Connection SQL Status
+	connection.getSqlStatus().clear();
+
     switch (DriverCompletion) {
       case SQL_DRIVER_PROMPT:
         // DRIVER
@@ -1115,8 +1118,10 @@ SQLRETURN SQL_API SQLGetDiagFieldW(
   case SQL_HANDLE_DBC:
 	  status = Driver::getInstance().getConnection(Handle).getSqlStatus();
 	  break;
-  case SQL_HANDLE_ENV:
   case SQL_HANDLE_STMT:
+	  status = Driver::getInstance().getStatement(Handle).getSqlStatus();
+	  break;
+  case SQL_HANDLE_ENV:
   case SQL_HANDLE_DESC:
   default:
 	  return SQL_ERROR;
@@ -1185,8 +1190,10 @@ SQLRETURN SQL_API SQLGetDiagRecW(
   case SQL_HANDLE_DBC:
 	  status = Driver::getInstance().getConnection(Handle).getSqlStatus();
 	  break;
-  case SQL_HANDLE_ENV:
   case SQL_HANDLE_STMT:
+	  status = Driver::getInstance().getStatement(Handle).getSqlStatus();
+	  break;
+  case SQL_HANDLE_ENV:
   case SQL_HANDLE_DESC:
   default:
 	  return SQL_ERROR;

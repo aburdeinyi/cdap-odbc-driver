@@ -53,5 +53,5 @@ std::wstring& Cask::CdapOdbc::SQLStatus::getMessage(SQLSMALLINT recNum) {
 }
 
 SQLSMALLINT Cask::CdapOdbc::SQLStatus::getRecCount() {
-	return statusItems.size();
+	return (SQLSMALLINT) statusItems.size();
 }
